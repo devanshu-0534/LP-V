@@ -1,0 +1,635 @@
+
+
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dropout
+
+
+
+
+
+
+
+
+
+dataset_train = pd.read_csv('Google_Stock_Price_Train.csv')
+
+
+
+
+
+
+
+dataset_train.head()
+
+
+
+
+
+#keras only takes numpy array
+training_set = dataset_train.iloc[:, 1: 2].values
+
+
+
+
+
+
+training_set.shape
+
+
+
+
+
+
+
+
+
+
+
+plt.figure(figsize=(18, 8))
+plt.plot(dataset_train['Open'])
+plt.title("Google Stock Open Prices")
+plt.xlabel("Time (oldest -> latest)")
+plt.ylabel("Stock Open Price")
+plt.show()
+
+
+
+
+
+
+
+
+import os
+if os.path.exists('config.py'):
+    print(1)
+else:
+    print(0)
+
+
+
+
+
+
+
+
+
+sc = MinMaxScaler(feature_range = (0, 1))
+#fit: get min/max of train data
+training_set_scaled = sc.fit_transform(training_set)
+
+
+
+
+
+
+
+## 60 timesteps and 1 output
+X_train = []
+y_train = []
+for i in range(60, len(training_set_scaled)):
+    X_train.append(training_set_scaled[i-60: i, 0])
+    y_train.append(training_set_scaled[i, 0])
+
+X_train, y_train = np.array(X_train), np.array(y_train)
+
+
+
+
+
+
+X_train.shape
+
+
+
+
+
+y_train.shape
+
+
+
+
+
+X_train = np.reshape(X_train, newshape =
+                     (X_train.shape[0], X_train.shape[1], 1))
+
+
+
+
+
+
+X_train.shape
+
+
+
+
+
+
+
+
+
+
+
+regressor = Sequential()
+#add 1st lstm layer
+regressor.add(LSTM(units = 50, return_sequences = True, input_shape = (X_train.shape[1], 1)))
+regressor.add(Dropout(rate = 0.2))
+
+##add 2nd lstm layer: 50 neurons
+regressor.add(LSTM(units = 50, return_sequences = True))
+regressor.add(Dropout(rate = 0.2))
+
+##add 3rd lstm layer
+regressor.add(LSTM(units = 50, return_sequences = True))
+regressor.add(Dropout(rate = 0.2))
+
+##add 4th lstm layer
+regressor.add(LSTM(units = 50, return_sequences = False))
+regressor.add(Dropout(rate = 0.2))
+
+##add output layer
+regressor.add(Dense(units = 1))
+
+
+
+
+
+
+
+
+
+
+regressor.summary()
+
+
+
+
+
+
+
+regressor.compile(optimizer = 'adam', loss = 'mean_squared_error')
+
+
+
+
+
+
+
+
+
+regressor.fit(x = X_train, y = y_train, batch_size = 32, epochs = 100)
+
+
+
+
+
+
+
+
+
+dataset_test = pd.read_csv('Google_Stock_Price_Test.csv')
+
+
+
+
+
+
+
+dataset_test.head()
+
+
+
+
+
+
+
+
+#keras only takes numpy array
+real_stock_price = dataset_test.iloc[:, 1: 2].values
+real_stock_price.shape
+
+
+
+
+
+
+
+#vertical concat use 0, horizontal uses 1
+dataset_total = pd.concat((dataset_train['Open'], dataset_test['Open']),
+                          axis = 0)
+##use .values to make numpy array
+inputs = dataset_total[len(dataset_total) - len(dataset_test) - 60:].values
+
+
+
+
+
+
+#reshape data to only have 1 col
+inputs = inputs.reshape(-1, 1)
+
+#scale input
+inputs = sc.transform(inputs)
+
+
+
+
+
+
+
+
+len(inputs)
+
+
+
+
+
+
+
+
+
+
+
+X_test = []
+for i in range(60, len(inputs)):
+    X_test.append(inputs[i-60:i, 0])
+X_test = np.array(X_test)
+#add dimension of indicator
+X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+
+
+
+
+
+
+
+
+X_test.shape
+
+
+
+
+
+
+
+predicted_stock_price = regressor.predict(X_test)
+
+
+
+
+
+
+
+#inverse the scaled value
+predicted_stock_price = sc.inverse_transform(predicted_stock_price)
+
+
+
+
+
+
+
+
+
+
+
+
+##visualize the prediction and real price
+plt.plot(real_stock_price, color = 'red', label = 'Real price')
+plt.plot(predicted_stock_price, color = 'blue', label = 'Predicted price')
+
+plt.title('Google price prediction')
+plt.xlabel('Time')
+plt.ylabel('Price')
+plt.legend()
+plt.show()
+
+
+
+
+
+
+
+_______________
+
+
+
+
+Excellent — now you’re working on a **Time Series Prediction model** using **LSTM** for **Google stock prices**!
+Let’s break this code **thoroughly**, step by step like before 👇
+
+---
+
+# 📝 **1️⃣ Detailed Code Explanation (LSTM Stock Prediction)**
+
+---
+
+## **Step 1: Import Libraries**
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+```
+
+➡️ Key libraries:
+
+* **Pandas/NumPy**: Data handling
+* **Matplotlib**: Visualization
+* **MinMaxScaler**: Normalize features
+* **Keras (LSTM, Dense, Dropout)**: Neural network
+
+---
+
+## **Step 2: Load Training Dataset**
+
+```python
+dataset_train = pd.read_csv('Google_Stock_Price_Train.csv')
+dataset_train.head()
+```
+
+➡️ Loads Google stock prices (training set)
+
+## **Step 3: Select 'Open' Price as Target Feature**
+
+```python
+training_set = dataset_train.iloc[:, 1:2].values
+training_set.shape  # (1258, 1)
+```
+
+➡️ We use **'Open'** prices (2nd column, index=1)
+
+---
+
+## **Step 4: Visualize Stock Prices**
+
+```python
+plt.plot(dataset_train['Open'])
+```
+
+➡️ Shows how Google's stock open price changed over time
+
+---
+
+## **Step 5: Scale Data (0 to 1)**
+
+```python
+sc = MinMaxScaler(feature_range=(0, 1))
+training_set_scaled = sc.fit_transform(training_set)
+```
+
+➡️ Neural networks work better when input features are **scaled**
+➡️ Fit scaler only on **training data**
+
+---
+
+## **Step 6: Create Time-Series Dataset (Sliding Window)**
+
+```python
+X_train = []
+y_train = []
+for i in range(60, len(training_set_scaled)):
+    X_train.append(training_set_scaled[i-60:i, 0])
+    y_train.append(training_set_scaled[i, 0])
+
+X_train, y_train = np.array(X_train), np.array(y_train)
+```
+
+➡️ For each day **i**, predict **price at day i**
+➡️ Use previous **60 days** data as features
+(Essentially: "given past 60 days, predict today’s price")
+
+```python
+X_train.shape  # (1198, 60)
+y_train.shape  # (1198,)
+```
+
+---
+
+## **Step 7: Reshape for LSTM Input**
+
+```python
+X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+```
+
+➡️ LSTM expects 3D input: **\[samples, timesteps, features]**
+➡️ Here: samples=1198, timesteps=60, features=1
+
+---
+
+## **Step 8: Build LSTM Model**
+
+```python
+regressor = Sequential()
+regressor.add(LSTM(units=50, return_sequences=True, input_shape=(60,1)))
+regressor.add(Dropout(0.2))
+
+regressor.add(LSTM(50, return_sequences=True))
+regressor.add(Dropout(0.2))
+
+regressor.add(LSTM(50, return_sequences=True))
+regressor.add(Dropout(0.2))
+
+regressor.add(LSTM(50))
+regressor.add(Dropout(0.2))
+
+regressor.add(Dense(units=1))  # Output layer
+```
+
+➡️ **4 LSTM layers**, 50 neurons each
+➡️ **Dropout** (0.2) after each LSTM to prevent overfitting
+➡️ Final **Dense layer** outputs 1 value (predicted price)
+
+---
+
+## **Step 9: Compile Model**
+
+```python
+regressor.compile(optimizer='adam', loss='mean_squared_error')
+```
+
+➡️ Adam optimizer
+➡️ MSE loss (regression problem)
+
+---
+
+## **Step 10: Train Model**
+
+```python
+regressor.fit(X_train, y_train, batch_size=32, epochs=100)
+```
+
+➡️ Batch size = 32 samples per update
+➡️ Train for 100 epochs
+
+---
+
+## **Step 11: Prepare Test Data**
+
+```python
+dataset_test = pd.read_csv('Google_Stock_Price_Test.csv')
+real_stock_price = dataset_test.iloc[:, 1:2].values
+```
+
+➡️ Loads **Test set** (same 'Open' price)
+
+---
+
+## **Step 12: Concatenate Train + Test for Input Context**
+
+```python
+dataset_total = pd.concat((dataset_train['Open'], dataset_test['Open']), axis=0)
+inputs = dataset_total[len(dataset_total) - len(dataset_test) - 60:].values
+```
+
+➡️ Need previous **60 days** data before test period starts
+➡️ **inputs** shape: 80 (60 past + 20 test days)
+
+---
+
+## **Step 13: Scale Inputs and Reshape**
+
+```python
+inputs = inputs.reshape(-1, 1)
+inputs = sc.transform(inputs)
+```
+
+---
+
+## **Step 14: Create Test Data (Sliding Window)**
+
+```python
+X_test = []
+for i in range(60, len(inputs)):
+    X_test.append(inputs[i-60:i, 0])
+X_test = np.array(X_test)
+X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+```
+
+➡️ Shape: (20, 60, 1)
+
+---
+
+## **Step 15: Make Predictions**
+
+```python
+predicted_stock_price = regressor.predict(X_test)
+predicted_stock_price = sc.inverse_transform(predicted_stock_price)
+```
+
+➡️ Predictions **rescaled back** to original price
+
+---
+
+## **Step 16: Plot Predictions vs Real**
+
+```python
+plt.plot(real_stock_price, color='red', label='Real price')
+plt.plot(predicted_stock_price, color='blue', label='Predicted price')
+plt.legend()
+plt.show()
+```
+
+➡️ **Red** = Actual
+➡️ **Blue** = Predicted
+
+---
+
+# ✨ **2️⃣ Key Concepts (Why/What is done)**
+
+| **Step**                             | **Reason**                              |
+| ------------------------------------ | --------------------------------------- |
+| Use past 60 days to predict next day | Capture temporal dependencies           |
+| Normalize data                       | Speeds up training + better convergence |
+| 4 LSTM layers                        | Model complex sequential patterns       |
+| Dropout layers                       | Prevent overfitting                     |
+| Inverse transform                    | Get predicted prices in original scale  |
+| Plot prediction vs actual            | Visualize model performance             |
+
+---
+
+# ❓ **3️⃣ Sample Viva / Interview QnA**
+
+---
+
+## **Data & Preprocessing**
+
+> **Q1:** Why do we concatenate train & test before scaling test?
+> **A:** To ensure we have past 60 days' data (context) before test period starts
+
+> **Q2:** Why do we scale data to \[0,1]?
+> **A:** LSTM converges faster and performs better with normalized data
+
+---
+
+## **Model**
+
+> **Q3:** Why use LSTM instead of regular dense NN?
+> **A:** LSTM is designed for **sequential data** → can remember past dependencies (important in time series)
+
+> **Q4:** Why Dropout layers?
+> **A:** To reduce overfitting by randomly dropping neurons during training
+
+> **Q5:** Why 4 LSTM layers?
+> **A:** To capture complex patterns and hierarchical features in data
+
+---
+
+## **Training/Evaluation**
+
+> **Q6:** What loss function is used and why?
+> **A:** **Mean Squared Error (MSE)** — common for regression tasks
+
+> **Q7:** Can we use RMSE instead?
+> **A:** Yes (RMSE = sqrt(MSE)), but model optimization is usually done on MSE directly
+
+> **Q8:** What’s a good metric to evaluate regression model on stock data?
+> **A:**
+
+* **MSE / RMSE**
+* **Mean Absolute Error (MAE)**
+* **R² score**
+
+---
+
+## **Advanced**
+
+> **Q9:** How to improve predictions?
+> **A:**
+
+* Use more features (e.g., High, Low, Volume)
+* Use more complex models (e.g., Bidirectional LSTM, GRU)
+* Tune hyperparameters (neurons, layers, dropout, epochs)
+
+> **Q10:** Is LSTM suitable for stock price prediction?
+> **A:** Technically yes — but **stock prices are noisy** and hard to predict accurately due to external factors.
+
+---
+
+# ✅ **Summary**
+
+This code:
+
+* Trains a **4-layer LSTM** to predict Google stock prices
+* Uses past **60 days** to predict next day's price
+* **Plots** real vs predicted prices
+
+---
+
+If you want — I can:
+✅ Add **R² / RMSE** evaluation
+✅ Or **upgrade model** with more features (Volume, High/Low)
+
+**Shall I show that next?** 🚀
+
+

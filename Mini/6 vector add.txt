@@ -1,0 +1,123 @@
+ EXPLANATION OF THE CUDA CODE
+🔧 1. Kernel Function
+cpp
+Copy
+Edit
+__global__ void vectorAdd(int *a, int *b, int *c, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) c[i] = a[i] + b[i];
+}
+__global__: This marks the function as a kernel, callable from host and executed on device (GPU).
+
+Each thread calculates one element of the output vector c[i] = a[i] + b[i].
+
+blockIdx.x, blockDim.x, and threadIdx.x are CUDA-provided variables to identify unique thread index.
+
+🧮 2. Host Code – Setup and Memory Allocation
+cpp
+Copy
+Edit
+int *a = new int[n];
+int *b = new int[n];
+int *c = new int[n];
+Host memory allocation (CPU).
+
+📥 3. Input Reading
+cpp
+Copy
+Edit
+cin >> a[i];  // and similarly for b
+Takes user input for vectors a and b.
+
+🧠 4. Device Memory Allocation
+cpp
+Copy
+Edit
+cudaMalloc(&d_a, n * sizeof(int));
+Allocates memory on the GPU for a, b, and c.
+
+🚀 5. Copy Data to Device
+cpp
+Copy
+Edit
+cudaMemcpy(d_a, a, n * sizeof(int), cudaMemcpyHostToDevice);
+Copies arrays from CPU to GPU memory.
+
+🧵 6. Kernel Launch
+cpp
+Copy
+Edit
+vectorAdd<<<gridSize, blockSize>>>(d_a, d_b, d_c, n);
+Launches gridSize × blockSize threads.
+
+Each thread adds a pair of elements a[i] + b[i].
+
+🧠 Calculation:
+
+cpp
+Copy
+Edit
+int blockSize = 256;
+int gridSize = (n + blockSize - 1) / blockSize;
+Ensures that enough threads are created to cover all n elements.
+
+🔄 7. Synchronization and Error Check
+cpp
+Copy
+Edit
+cudaDeviceSynchronize();
+cudaGetLastError();
+Waits for GPU to finish, then checks for errors.
+
+📤 8. Copy Results Back
+cpp
+Copy
+Edit
+cudaMemcpy(c, d_c, n * sizeof(int), cudaMemcpyDeviceToHost);
+Brings result vector c back to host memory from GPU.
+
+🧹 9. Cleanup
+cpp
+Copy
+Edit
+cudaFree(...); delete[] ...;
+Frees device and host memory.
+
+🔁 COMPARISON WITH CPU-ONLY VERSION
+Feature	CPU Version	CUDA Version (GPU)
+Speed	Slower for large arrays	Much faster (parallelism)
+Threads	Single	Thousands of GPU threads
+Memory	Uses only host RAM	Requires explicit GPU memory
+Performance Overhead	None	Kernel launch and copy time
+
+❓ IMPORTANT Q&A (CUDA)
+1. What is a CUDA kernel?
+A CUDA kernel is a function executed on the GPU, with many threads running it in parallel.
+
+2. What does blockIdx.x * blockDim.x + threadIdx.x calculate?
+It calculates the global thread ID so that each thread works on a unique element of the array.
+
+3. Why do we check if (i < n) in the kernel?
+To avoid out-of-bounds access—in case the total number of threads exceeds n.
+
+4. What is the purpose of cudaMemcpy()?
+Transfers data between host and device memory.
+
+Required because CPU and GPU have separate memory spaces.
+
+5. What happens if you forget cudaDeviceSynchronize()?
+The CPU may proceed before the GPU finishes, leading to incorrect or incomplete results.
+
+6. Why is memory freed with cudaFree() and delete[]?
+cudaFree() for GPU memory (d_a, d_b, d_c)
+
+delete[] for CPU memory (a, b, c)
+
+7. What are <<<gridSize, blockSize>>>?
+They define the execution configuration:
+
+gridSize: Number of thread blocks.
+
+blockSize: Threads per block.
+This setup lets CUDA launch gridSize × blockSize threads.
+

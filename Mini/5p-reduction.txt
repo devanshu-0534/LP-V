@@ -1,0 +1,107 @@
+ FULL EXPLANATION
+📦 Headers
+cpp
+Copy
+Edit
+#include <iostream>
+#include <vector>
+#include <limits>
+#include <omp.h>
+#include <climits>
+iostream for input/output.
+
+vector to store input data.
+
+omp.h for OpenMP parallelization.
+
+climits for using INT_MAX and INT_MIN.
+
+🧾 Input Phase
+cpp
+Copy
+Edit
+int n;
+cout << "Enter number of elements: ";
+cin >> n;
+vector<int> data(n);
+cout << "Enter elements:\n";
+for (int i = 0; i < n; ++i) cin >> data[i];
+Reads size and elements into data[].
+
+📊 Initialization
+cpp
+Copy
+Edit
+int minVal = INT_MAX, maxVal = INT_MIN;
+long long sum = 0;
+minVal: initialized to max possible int.
+
+maxVal: initialized to min possible int.
+
+sum: accumulates total sum.
+
+⚡ Parallel Reduction
+cpp
+Copy
+Edit
+#pragma omp parallel for reduction(min:minVal) reduction(max:maxVal) reduction(+:sum)
+for (int i = 0; i < n; ++i) {
+    if (data[i] < minVal) minVal = data[i];
+    if (data[i] > maxVal) maxVal = data[i];
+    sum += data[i];
+}
+This loop is parallelized using OpenMP.
+
+Each thread computes partial results of:
+
+min
+
+max
+
+sum
+
+Then OpenMP merges them safely at the end (reduction).
+
+🧠 reduction handles combining thread-local variables back into global variables after the loop.
+
+📈 Compute Average
+cpp
+Copy
+Edit
+double avg = static_cast<double>(sum) / n;
+Converts sum to double and divides by n for average.
+
+🖨️ Output
+cpp
+Copy
+Edit
+cout << "Min: " << minVal << "\nMax: " << maxVal << "\nSum: " << sum << "\nAverage: " << avg << endl;
+Prints results.
+
+🔁 SEQUENTIAL vs PARALLEL
+Feature	Sequential Version	Parallel Version (OpenMP)
+Execution	One thread	Multiple threads
+Speed	Slower for large n	Faster on multi-core CPUs
+Safety	No risk of race	Needs reduction to avoid races
+Syntax	Simple	Requires #pragma omp reduction
+Use Cases	Small datasets	Medium to large datasets
+
+❓ KEY Q&A
+1. What is a reduction in OpenMP?
+Answer: A reduction in OpenMP combines values from multiple threads into a single shared variable using a specified operation (+, min, max, etc.).
+
+2. Why use INT_MAX and INT_MIN?
+Answer: These are initialized as extreme values to ensure proper comparison during min/max operations.
+
+3. Why is sum declared as long long?
+Answer: To avoid overflow when summing large integers. int might not hold large sums reliably.
+
+4. Is the average calculation thread-safe?
+Answer: Yes, because it happens after the parallel loop and uses the final sum.
+
+5. Can you use other reduction operations?
+Answer: Yes. OpenMP supports:
+
++, -, *, &, |, ^
+
+min, max (C++11+ or custom reduction in newer OpenMP

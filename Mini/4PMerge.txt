@@ -1,0 +1,124 @@
+ FULL EXPLANATION OF THE CODE
+🔧 Headers and Setup
+cpp
+Copy
+Edit
+#include <iostream>
+#include <vector>
+#include <omp.h>
+using namespace std;
+vector holds the array.
+
+omp.h enables OpenMP, which allows you to execute different parts of the code in parallel.
+
+📦 merge() Function
+cpp
+Copy
+Edit
+void merge(vector<int>& arr, int l, int m, int r)
+Merges two sorted subarrays:
+
+Left: arr[l..m]
+
+Right: arr[m+1..r]
+
+Uses two temporary vectors left[] and right[].
+
+Merges them into the original array arr.
+
+🧠 This is the classic merge step used in Merge Sort.
+
+⚡ parallelMergeSort() Function
+cpp
+Copy
+Edit
+void parallelMergeSort(vector<int>& arr, int l, int r)
+The core recursive merge sort logic.
+
+Splits the array into two halves and recursively sorts each half in parallel:
+
+cpp
+Copy
+Edit
+#pragma omp parallel sections
+{
+    #pragma omp section
+    parallelMergeSort(arr, l, m);
+    #pragma omp section
+    parallelMergeSort(arr, m + 1, r);
+}
+Once the two halves are sorted, it merges them using the merge() function.
+
+💡 This parallelism is achieved using OpenMP sections, where each recursive call can be executed in a separate thread.
+
+🏁 main() Function
+cpp
+Copy
+Edit
+int main() {
+    ...
+}
+Reads the size and elements of the array.
+
+Calls parallelMergeSort() on the entire array.
+
+Prints the sorted array.
+
+🧠 KEY CONCEPTS
+Why Merge Sort is Good for Parallelization
+Divide-and-conquer nature: splits work into independent tasks.
+
+Recursive calls on left and right halves can run in parallel.
+
+Merge phase is sequential but fast (linear time).
+
+OpenMP sections
+#pragma omp parallel sections creates parallel execution blocks.
+
+Each section inside is executed by a different thread.
+
+Very suitable for recursive problems like Merge Sort.
+
+🔁 COMPARISON: Sequential vs Parallel Merge Sort
+Feature	Sequential Merge Sort	Parallel Merge Sort (OpenMP)
+Execution	Single thread	Multi-threaded using sections
+Recursion	One call at a time	Two recursive calls in parallel
+Speed	O(n log n), but single-core	Faster on large arrays and multi-core CPUs
+Parallel Efficiency	None	High (especially on large inputs)
+Use Cases	Small to medium datasets	Large datasets on multi-core systems
+
+❓ KEY QUESTIONS & ANSWERS
+1. Why is Merge Sort better suited for parallelization than Bubble Sort?
+Answer: Merge Sort naturally divides the array into independent subproblems (left and right halves), allowing true parallel execution. Bubble Sort depends on adjacent element comparisons, which conflict in parallel environments.
+
+2. What does #pragma omp parallel sections do?
+Answer: It allows multiple code blocks (sections) to run concurrently on separate threads, making it ideal for splitting tasks in divide-and-conquer algorithms like Merge Sort.
+
+3. Why is the merge step not parallelized?
+Answer: The merge operation involves combining two sorted arrays into one. It is relatively fast (linear) and involves tight element-by-element logic, which makes it complex and inefficient to parallelize at this small scale.
+
+4. Can too much parallelism hurt performance?
+Answer: Yes. Recursive parallelism can lead to thread oversubscription (too many threads) and context-switching overhead, especially for small arrays. A good practice is to add a threshold like:
+
+cpp
+Copy
+Edit
+if (r - l > threshold) {
+    // parallel sections
+} else {
+    // do sequentially
+}
+5. What is the time complexity of Parallel Merge Sort?
+Answer:
+
+Time Complexity (same as sequential): O(n log n)
+
+Parallel Time: Can approach O(log n) depth on ideal hardware with enough threads, though actual performance depends on system and input size.
+
+✅ SUMMARY
+Your code demonstrates a clean and effective implementation of parallel merge sort using OpenMP.
+
+This is real-world parallelization, suitable for large datasets and modern multi-core CPUs.
+
+Compared to Bubble Sort, this is far more efficient and scalable.
+

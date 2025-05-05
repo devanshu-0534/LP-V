@@ -1,0 +1,121 @@
+ CUDA MATRIX MULTIPLICATION: FULL EXPLANATION
+🔧 1. CUDA Kernel Function
+cpp
+Copy
+Edit
+__global__ void matrixMul(int *A, int *B, int *C, int n)
+This function runs on the GPU.
+
+It uses 2D thread and block indexing to assign computation of each C[row][col] to a unique thread.
+
+🧮 2. Thread Index Calculation
+cpp
+Copy
+Edit
+int row = blockIdx.y * blockDim.y + threadIdx.y;
+int col = blockIdx.x * blockDim.x + threadIdx.x;
+Each thread computes one element of the result matrix C[row][col].
+
+✖️ 3. Matrix Multiplication Logic
+cpp
+Copy
+Edit
+if (row < n && col < n) {
+    int value = 0;
+    for (int k = 0; k < n; k++) {
+        value += A[row * n + k] * B[k * n + col];
+    }
+    C[row * n + col] = value;
+}
+Each thread computes the dot product of a row of A and a column of B.
+
+🧠 Flattened 2D Indexing:
+
+Matrix stored in 1D array: M[i][j] → M[i * n + j].
+
+🏁 4. Host Code (Main Function)
+Step-by-step:
+cpp
+Copy
+Edit
+int *A = new int[n * n]; // Host matrix A
+...
+cudaMalloc(&d_A, n * n * sizeof(int)); // Device memory for A
+...
+cudaMemcpy(d_A, A, n * n * sizeof(int), cudaMemcpyHostToDevice);
+Allocates memory on CPU and GPU.
+
+Copies data from CPU to GPU before computation.
+
+📐 5. Launch Kernel
+cpp
+Copy
+Edit
+dim3 blockSize(16, 16);
+dim3 gridSize((n + 15) / 16, (n + 15) / 16);
+matrixMul<<<gridSize, blockSize>>>(d_A, d_B, d_C, n);
+blockSize(16,16) → 256 threads per block.
+
+gridSize ensures all elements are covered, even if n is not divisible by 16.
+
+🔄 6. Synchronize and Copy Back
+cpp
+Copy
+Edit
+cudaDeviceSynchronize();
+cudaMemcpy(C, d_C, n * n * sizeof(int), cudaMemcpyDeviceToHost);
+Waits for GPU to finish.
+
+Copies result matrix C back to host memory.
+
+🧹 7. Cleanup
+cpp
+Copy
+Edit
+cudaFree(...); delete[] ...;
+Frees memory on both host and device.
+
+🧠 KEY CUDA Q&A FOR THIS PROGRAM
+1. Why use dim3 blockSize(16, 16)?
+This creates a 2D block of 256 threads, ideal for 2D grid-like data such as matrices.
+
+2. What is the use of gridSize = (n + 15) / 16?
+It ensures we have enough blocks to cover all matrix elements, even if n is not divisible by 16.
+
+3. Why do we use __global__ for matrixMul?
+__global__ declares a kernel function that runs on the GPU but is launched from the CPU.
+
+4. What happens if cudaDeviceSynchronize() is omitted?
+The CPU may read back incomplete results because the GPU might still be running.
+
+5. Why is the result stored in C[row * n + col]?
+Because CUDA does not support true 2D arrays directly on the device, we simulate 2D with flattened indexing.
+
+6. What are the performance bottlenecks?
+Memory latency from global memory.
+
+Lack of shared memory or tiling (not used in this basic implementation).
+
+Thread divergence if matrix size is not a multiple of block size.
+
+✅ SAMPLE INPUT / OUTPUT
+Input:
+
+mathematica
+Copy
+Edit
+Enter the size of the matrices (n x n): 2
+Enter elements of matrix A:
+1 2
+3 4
+Enter elements of matrix B:
+5 6
+7 8
+Output:
+
+rust
+Copy
+Edit
+Result matrix C:
+19 22
+43 50

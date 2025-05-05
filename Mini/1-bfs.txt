@@ -1,0 +1,133 @@
+🔍 Code Explanation
+🔧 Headers and Namespace
+cpp
+Copy
+Edit
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <omp.h>
+using namespace std;
+iostream, vector, and queue are standard C++ libraries.
+
+omp.h is used to enable OpenMP — a library for parallel programming.
+
+🚀 Function: parallelBFS
+cpp
+Copy
+Edit
+void parallelBFS(vector<vector<int>>& graph, int start)
+This function performs a parallel BFS (Breadth-First Search) starting from node start in the graph.
+
+🏗️ Initialization
+cpp
+Copy
+Edit
+int n = graph.size();
+vector<bool> visited(n, false);
+queue<int> q;
+vector<int> traversalOrder;
+visited[start] = true;
+q.push(start);
+visited: Keeps track of visited nodes.
+
+q: Standard BFS queue.
+
+traversalOrder: Records the exact order nodes were visited in (for final output).
+
+🔁 While loop: Traverse Level by Level
+cpp
+Copy
+Edit
+while (!q.empty()) {
+    int sz = q.size();
+    vector<int> currentLevel;
+Processes nodes in BFS layers.
+
+sz: Number of nodes in current level.
+
+currentLevel: Stores nodes discovered in this level to be added to the queue later.
+
+🧵 Parallel processing using OpenMP
+cpp
+Copy
+Edit
+#pragma omp parallel for shared(q, visited)
+for (int i = 0; i < sz; ++i)
+This loop is parallelized using OpenMP.
+
+Each thread tries to process a node from the current level.
+
+🔒 Critical Section to Pop from Queue
+cpp
+Copy
+Edit
+#pragma omp critical
+{
+    if (!q.empty()) {
+        u = q.front(); q.pop();
+        cout << "Visited: " << u << endl;
+        traversalOrder.push_back(u);
+    }
+}
+Only one thread at a time can pop from the queue due to #pragma omp critical.
+
+It prints and stores the node.
+
+🔄 Visit Neighbors
+cpp
+Copy
+Edit
+for (int v : graph[u]) {
+    #pragma omp critical
+    {
+        if (!visited[v]) {
+            visited[v] = true;
+            currentLevel.push_back(v);
+        }
+    }
+}
+For each neighbor of node u, mark as visited and add to currentLevel (safely, using critical).
+
+📥 Add Next Level to Queue
+cpp
+Copy
+Edit
+for (int v : currentLevel) q.push(v);
+Once the level is fully processed, add its new nodes to the queue.
+
+📋 Print Traversal Order
+cpp
+Copy
+Edit
+cout << "Traversal Order: ";
+for (int node : traversalOrder) {
+    cout << node << " ";
+}
+cout << endl;
+After BFS finishes, this prints the order in which nodes were visited.
+
+📊 Comparison: Parallel BFS vs Normal (Sequential) BFS
+Feature	Normal BFS	Parallel BFS (Your Code)
+Execution	Single-threaded	Multi-threaded via OpenMP
+Order of Traversal	Deterministic (same every time)	Non-deterministic (depends on thread scheduling)
+Speed	Slower for large graphs	Potentially faster on large graphs and multi-core CPUs
+Complexity	Easier to implement and debug	Harder to manage due to race conditions and synchronization
+Thread Safety	No concurrency issues	Needs #pragma omp critical for safe access
+Use Case	Small to medium graphs	Large graphs with high branching factor
+
+⚠️ Limitations in This Parallel Code
+The use of #pragma omp critical serializes parts of the logic (e.g., queue access), reducing actual parallel benefit.
+
+Thread-safe access to visited[] and queue still slows down performance.
+
+Because multiple threads may process different nodes simultaneously, the order of visited nodes can vary between runs.
+
+✅ Summary
+Your code performs parallel BFS correctly using OpenMP, with some synchronization overhead to avoid race conditions. It's suitable for experimenting with parallel graph traversal, especially on large graphs, but keep in mind:
+
+For small graphs, sequential BFS is faster and simpler.
+
+For large graphs, optimizing parallel BFS to avoid contention (e.g., using thread-local queues or atomic operations) can lead to real performance gains.
+
+Would you like a version of this that runs purely sequentially for comparison?

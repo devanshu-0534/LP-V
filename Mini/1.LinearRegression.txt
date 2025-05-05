@@ -1,0 +1,566 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+
+
+
+
+
+
+# Importing the Boston Housing dataset from the sklearn
+from sklearn.datasets import fetch_openml
+
+# Load the Boston housing dataset from OpenML
+boston = fetch_openml(data_id=531)
+
+
+
+
+
+
+
+
+#Converting the data into pandas dataframe
+data = pd.DataFrame(boston.data)
+
+
+
+
+
+
+
+#First look at the data
+data.head()
+
+
+
+
+#Adding the feature names to the dataframe
+data.columns = boston.feature_names
+
+
+
+
+
+
+#Adding the target variable to the dataset
+data['PRICE'] = boston.target
+
+
+
+
+
+
+#Looking at the data with names and target variable
+data.head()
+
+
+
+
+
+
+#Shape of the data
+print(data.shape)
+
+
+
+
+#Checking the null values in the dataset
+data.isnull().sum()
+
+
+
+
+
+
+
+#Checking the statistics of the data
+data.describe()
+
+
+
+
+data.info()
+
+
+
+
+
+#checking the distribution of the target variable
+import seaborn as sns
+sns.displot(data['PRICE'], kde=True)
+
+
+
+
+
+
+
+
+
+#Distribution using box plot
+sns.boxplot(data.PRICE)
+
+
+
+
+
+
+
+
+
+#checking Correlation of the data
+'correlation = data.corr()
+correlation.loc['PRICE']'
+
+
+
+
+
+
+
+# plotting the heatmap
+import matplotlib.pyplot as plt
+fig,axes = plt.subplots(figsize=(15,12))
+sns.heatmap(correlation,square = True,annot = True)
+
+
+
+
+
+# Checking the scatter plot with the most correlated features
+plt.figure(figsize = (20,5))
+features = ['LSTAT','RM','PTRATIO']
+for i, col in enumerate(features):
+    plt.subplot(1, len(features) , i+1)
+    x = data[col]
+    y = data.PRICE
+    plt.scatter(x, y, marker='o')
+    plt.title("Variation in House prices")
+    plt.xlabel(col)
+    plt.ylabel('"House prices in $1000"')
+
+
+
+
+
+
+
+#X = data[['LSTAT','RM','PTRATIO']]
+X = data.iloc[:,:-1]
+y= data.PRICE
+
+
+
+
+
+
+# Splitting the data into train and test for building the model
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size = 0.2, random_state = 4)
+
+
+
+
+
+
+
+
+
+
+
+#Linear Regression
+from sklearn.linear_model import LinearRegression
+regressor = LinearRegression()
+
+
+
+#Fitting the model
+regressor.fit(X_train,y_train)
+
+
+
+
+
+
+
+
+
+# Convert X_test to a NumPy array
+X_test = np.array(X_test)
+#Prediction on the test dataset
+y_pred = regressor.predict(X_test)
+
+
+
+
+
+
+
+# Predicting RMSE the Test set results
+from sklearn.metrics import mean_squared_error
+rmse = (np.sqrt(mean_squared_error(y_test, y_pred)))
+print(rmse)
+
+
+
+
+
+from sklearn.metrics import r2_score
+r2 = r2_score(y_test, y_pred)
+print(r2)
+
+
+
+
+
+
+#Creating the neural network model
+import keras
+from keras.layers import Dense, Activation,Dropout
+from keras.models import Sequential
+
+model = Sequential()
+
+model.add(Dense(128,activation  = 'relu',input_dim =13))
+model.add(Dense(64,activation  = 'relu'))
+model.add(Dense(32,activation  = 'relu'))
+model.add(Dense(16,activation  = 'relu'))
+model.add(Dense(1))
+model.compile(optimizer = 'adam',loss = 'mean_squared_error')
+
+
+
+
+
+
+
+
+
+
+#Scaling the dataset
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+
+
+
+
+
+
+results=model.fit(X_train, y_train, epochs = 100)
+
+
+
+
+
+
+
+
+y_pred = model.predict(X_test)
+
+
+
+
+
+
+
+
+
+from sklearn.metrics import r2_score
+r2 = r2_score(y_test, y_pred)
+print(r2)
+
+
+
+
+
+
+
+# Predicting RMSE the Test set results
+from sklearn.metrics import mean_squared_error
+rmse = (np.sqrt(mean_squared_error(y_test, y_pred)))
+print(rmse)
+
+
+
+
+
+
+
+
+
+
+
+plt.plot(results.history['loss'])
+plt.title('Model Loss')
+plt.ylabel('Loss ')
+plt.xlabel('Epoch')
+plt.show()
+
+
+
+
+
+
+
+
+
+from keras.layers import Dropout
+from keras import regularizers
+
+
+model_3 = Sequential([
+    Dense(1000, activation='relu', kernel_regularizer=regularizers.l2(0.01), input_shape=(13,)),
+    Dropout(0.3),
+    Dense(1000, activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+    Dropout(0.3),
+    Dense(1000, activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+    Dropout(0.3),
+    Dense(1000, activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+    Dropout(0.3),
+    Dense(1, activation='sigmoid', kernel_regularizer=regularizers.l2(0.01)),
+])
+
+
+
+
+
+
+
+
+
+
+
+
+model_3.compile(optimizer='adam',
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
+hist_3 = model_3.fit(X_train, y_train,
+          batch_size=32, epochs=100,
+          validation_data=(X_test, y_test))
+
+
+
+
+
+
+
+
+
+
+
+plt.plot(hist_3.history['loss'])
+plt.plot(hist_3.history['val_loss'])
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Val'], loc='upper right')
+plt.show()
+
+
+
+
+
+
+
+
+_________________________
+
+
+
+ Data Exploration
+🛠 Code Breakdown
+python
+Copy
+Edit
+from sklearn.datasets import fetch_openml
+boston = fetch_openml(data_id=531)
+— Loads the Boston Housing dataset from OpenML.
+It contains housing data to predict house prices.
+
+python
+Copy
+Edit
+data = pd.DataFrame(boston.data)
+data.columns = boston.feature_names
+data['PRICE'] = boston.target
+— Converts to a Pandas DataFrame
+— Sets column names + adds target (PRICE)
+
+python
+Copy
+Edit
+data.shape  # (506, 14)
+data.isnull().sum()  # Checks for missing values (there are none)
+data.describe()  # Summary stats
+data.info()  # Data types and memory usage
+📊 Visualization Explanation
+1️⃣ Price Distribution Plot
+python
+Copy
+Edit
+sns.displot(data['PRICE'], kde=True)
+
+Skewed slightly to the right
+
+Most houses priced between $15k - $30k
+→ Some outliers on higher end (around $50k)
+
+2️⃣ Box Plot of Price
+python
+Copy
+Edit
+sns.boxplot(data.PRICE)
+
+Median ~ $22k
+
+Outliers above 37 and below 6
+
+3️⃣ Correlation Heatmap
+python
+Copy
+Edit
+correlation = data.corr()
+sns.heatmap(correlation, square=True, annot=True)
+
+Strongest correlations with PRICE:
+
++0.7 → RM (Avg rooms per dwelling)
+
+–0.74 → LSTAT (% lower status population)
+
+–0.51 → PTRATIO (Pupil-Teacher Ratio)
+
+4️⃣ Scatter Plots (Top features vs Price)
+python
+Copy
+Edit
+features = ['LSTAT', 'RM', 'PTRATIO']
+
+LSTAT ↓ → Price ↓ (negative correlation)
+
+RM ↑ → Price ↑ (positive correlation)
+
+PTRATIO ↓ → Price ↑ (weak but negative)
+
+② Linear Regression Model
+python
+Copy
+Edit
+X = data.iloc[:,:-1]  # All features
+y = data.PRICE
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=4)
+python
+Copy
+Edit
+regressor = LinearRegression()
+regressor.fit(X_train, y_train)
+y_pred = regressor.predict(X_test)
+python
+Copy
+Edit
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+r2 = r2_score(y_test, y_pred)
+print(rmse, r2)
+✅ RMSE = ~5.02
+✅ R² = ~0.78 → 78% variance explained
+
+③ Deep Neural Network (DNN)
+DNN v1 - Simple Network
+python
+Copy
+Edit
+model = Sequential([
+    Dense(128, activation='relu', input_dim=13),
+    Dense(64, activation='relu'),
+    Dense(32, activation='relu'),
+    Dense(16, activation='relu'),
+    Dense(1)
+])
+model.compile(optimizer='adam', loss='mean_squared_error')
+python
+Copy
+Edit
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+results = model.fit(X_train, y_train, epochs=100)
+python
+Copy
+Edit
+y_pred = model.predict(X_test)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+r2 = r2_score(y_test, y_pred)
+✅ RMSE ~3.3 (better than Linear Regression)
+✅ R² ~0.89 (explains more variance)
+
+DNN v2 - Large Network with Dropout & Regularization
+python
+Copy
+Edit
+model_3 = Sequential([
+    Dense(1000, activation='relu', kernel_regularizer=regularizers.l2(0.01), input_shape=(13,)),
+    Dropout(0.3),
+    Dense(1000, activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+    Dropout(0.3),
+    Dense(1000, activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+    Dropout(0.3),
+    Dense(1000, activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+    Dropout(0.3),
+    Dense(1, activation='sigmoid', kernel_regularizer=regularizers.l2(0.01))
+])
+python
+Copy
+Edit
+model_3.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+hist_3 = model_3.fit(X_train, y_train, batch_size=32, epochs=100, validation_data=(X_test, y_test))
+⚠️ Mistake here:
+→ Binary crossentropy and sigmoid not suited for regression (house prices are continuous!)
+→ Wrong loss function for regression
+
+Loss Plot (DNN v2)
+python
+Copy
+Edit
+plt.plot(hist_3.history['loss'])
+plt.plot(hist_3.history['val_loss'])
+
+Both training and validation losses decrease, but
+
+Negative loss values & scale issues → Model isn’t behaving well (because of wrong setup)
+
+④ Key Observations
+Model	RMSE (↓)	R² (↑)
+Linear Regression	~5.02	~0.78
+DNN v1 (correct)	~3.3	~0.89
+DNN v2 (wrong)	NA (invalid)	NA
+
+✅ Neural Network (v1) outperforms Linear Regression
+❌ DNN v2 setup is invalid (wrong activation + loss)
+
+Example Q&A
+Q1. Why do we scale data before DNN?
+➡️ Neural networks converge faster and better when input data is standardized (mean=0, std=1)
+
+Q2. Why is binary_crossentropy wrong here?
+➡️ Because we’re predicting continuous price values, not binary classification
+
+Q3. Why does RM perform positively with price?
+➡️ More rooms → bigger houses → higher price
+
+Q4. What do L2 regularization + Dropout do?
+➡️ Prevent overfitting by penalizing large weights and randomly dropping neurons during training
+
+If you want — I can suggest corrected DNN v2 code as well.
+Would you like that? ✨
+
+
+
+
+

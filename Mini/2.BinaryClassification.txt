@@ -1,0 +1,563 @@
+import numpy as np
+from keras.datasets import imdb
+from keras import models
+from keras import layers
+from keras import optimizers
+from keras import losses
+from keras import metrics
+
+
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+
+
+
+
+
+
+
+
+
+
+# Load the data, keeping only 10,000 of the most frequently occuring words
+(train_data, train_labels), (test_data, test_labels) = imdb.load_data(num_words = 10000)
+
+
+
+
+
+
+train_data[:2]
+
+
+
+
+
+
+
+
+train_labels
+
+
+
+
+
+
+# Check the first label
+train_labels[0]
+
+
+
+
+
+# Since we restricted ourselves to the top 10000 frequent words, no word index should exceed 10000
+# we'll verify this below
+
+# Here is a list of maximum indexes in every review --- we search the maximum index in this list of max indexes
+print(type([max(sequence) for sequence in train_data]))
+
+# Find the maximum of all max indexes
+max([max(sequence) for sequence in train_data])
+
+
+
+
+
+
+
+
+
+
+
+
+# Let's quickly decode a review
+
+# step 1: load the dictionary mappings from word to integer index
+word_index = imdb.get_word_index()
+
+# step 2: reverse word index to map integer indexes to their respective words
+reverse_word_index = dict([(value, key) for (key, value) in word_index.items()])
+
+# Step 3: decode the review, mapping integer indices to words
+#
+# indices are off by 3 because 0, 1, and 2 are reserverd indices for "padding", "Start of sequence" and "unknown"
+decoded_review = ' '.join([reverse_word_index.get(i-3, '?') for i in train_data[0]])
+
+decoded_review
+
+
+
+
+
+
+
+len(reverse_word_index)
+
+
+
+
+
+
+
+
+
+
+
+
+def vectorize_sequences(sequences, dimension=10000):
+    results = np.zeros((len(sequences), dimension))    # Creates an all zero matrix of shape (len(sequences),10K)
+    for i,sequence in enumerate(sequences):
+        results[i,sequence] = 1                        # Sets specific indices of results[i] to 1s
+    return results
+
+# Vectorize training Data
+X_train = vectorize_sequences(train_data)
+
+# Vectorize testing Data
+X_test = vectorize_sequences(test_data)
+
+
+
+
+
+
+
+X_train[0]
+
+
+
+
+
+
+
+
+
+X_train.shape
+
+
+
+
+
+
+
+y_train = np.asarray(train_labels).astype('float32')
+y_test  = np.asarray(test_labels).astype('float32')
+
+
+
+
+
+
+
+
+model = models.Sequential()
+model.add(layers.Dense(16, activation='relu', input_shape=(10000,)))
+model.add(layers.Dense(16, activation='relu'))
+model.add(layers.Dense(1, activation='sigmoid'))
+
+
+
+
+
+model.compile(
+    optimizer=optimizers.RMSprop(learning_rate=0.001),
+    loss = losses.binary_crossentropy,
+    metrics = [metrics.binary_accuracy]
+)
+
+
+
+
+
+
+
+# Input for Validation
+X_val = X_train[:10000]
+partial_X_train = X_train[10000:]
+
+# Labels for validation
+y_val = y_train[:10000]
+partial_y_train = y_train[10000:]
+
+
+
+
+
+
+history = model.fit(
+    partial_X_train,
+    partial_y_train,
+    epochs=20,
+    batch_size=512,
+    validation_data=(X_val, y_val)
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+history_dict = history.history
+history_dict.keys()
+
+
+
+
+
+
+
+# Plotting losses
+loss_values = history_dict['loss']
+val_loss_values = history_dict['val_loss']
+
+epochs = range(1, len(loss_values) + 1)
+
+plt.plot(epochs, loss_values, 'g', label="Training Loss")
+plt.plot(epochs, val_loss_values, 'b', label="Validation Loss")
+
+plt.title('Training and Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss Value')
+plt.legend()
+
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+# Training and Validation Accuracy
+
+acc_values = history_dict['binary_accuracy']
+val_acc_values = history_dict['val_binary_accuracy']
+
+epochs = range(1, len(loss_values) + 1)
+
+plt.plot(epochs, acc_values, 'g', label="Training Accuracy")
+plt.plot(epochs, val_acc_values, 'b', label="Validation Accuracy")
+
+plt.title('Training and Validation Accuraccy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+model.fit(
+    partial_X_train,
+    partial_y_train,
+    epochs=3,
+    batch_size=512,
+    validation_data=(X_val, y_val)
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Making Predictions for testing data
+np.set_printoptions(suppress=True)
+result = model.predict(X_test)
+
+
+
+
+
+
+
+
+
+result
+
+
+
+
+
+
+
+
+
+y_pred = np.zeros(len(result))
+for i, score in enumerate(result):
+    y_pred[i] = np.round(score)
+
+
+
+
+
+
+
+
+
+
+
+
+mae = metrics.mean_absolute_error(y_pred, y_test)
+mae
+
+
+
+
+
+
+
+
+
+
+
+__________________
+
+
+
+1️⃣ Code Explanation
+Import libraries
+python
+Copy
+Edit
+import numpy as np
+import matplotlib.pyplot as plt
+from keras.datasets import imdb
+from keras import models, layers, optimizers, losses, metrics
+➡️ We are using:
+
+Keras: Deep learning library
+
+IMDB dataset: Pre-loaded dataset of movie reviews (sentiment classification)
+
+Matplotlib: For plotting
+
+Load IMDB dataset (top 10,000 words only)
+python
+Copy
+Edit
+(train_data, train_labels), (test_data, test_labels) = imdb.load_data(num_words=10000)
+Keeps only top 10k frequent words
+
+train_data / test_data: lists of word indices (encoded reviews)
+
+train_labels / test_labels: 0 (negative) / 1 (positive)
+
+Understand & inspect the data
+python
+Copy
+Edit
+train_data[:2]  # First 2 encoded reviews
+train_labels    # All labels (0 or 1)
+train_labels[0] # First label
+Check max index value in training data
+python
+Copy
+Edit
+[max(sequence) for sequence in train_data]  # Max word index per review
+max([max(sequence) for sequence in train_data])  # Max word index in whole dataset
+➡️ Confirms indices < 10,000
+
+Decode a review back to words
+python
+Copy
+Edit
+word_index = imdb.get_word_index()  # word -> index mapping
+reverse_word_index = dict([(value, key) for (key, value) in word_index.items()])
+decoded_review = ' '.join([reverse_word_index.get(i - 3, '?') for i in train_data[0]])
+Indices offset by 3 (reserved tokens)
+
+Shows human-readable review text
+
+Vectorize sequences
+python
+Copy
+Edit
+def vectorize_sequences(sequences, dimension=10000):
+    results = np.zeros((len(sequences), dimension))
+    for i, sequence in enumerate(sequences):
+        results[i, sequence] = 1
+    return results
+
+X_train = vectorize_sequences(train_data)
+X_test = vectorize_sequences(test_data)
+➡️ Converts each review to 1-hot encoded vector of size 10,000
+
+Prepare labels
+python
+Copy
+Edit
+y_train = np.asarray(train_labels).astype('float32')
+y_test = np.asarray(test_labels).astype('float32')
+Build the Neural Network
+python
+Copy
+Edit
+model = models.Sequential()
+model.add(layers.Dense(16, activation='relu', input_shape=(10000,)))
+model.add(layers.Dense(16, activation='relu'))
+model.add(layers.Dense(1, activation='sigmoid'))
+➡️ Architecture:
+
+Input: 10,000-dimensional
+
+2 hidden layers: 16 neurons, relu
+
+Output: 1 neuron, sigmoid (binary classification)
+
+Compile model
+python
+Copy
+Edit
+model.compile(optimizer=optimizers.RMSprop(learning_rate=0.001),
+              loss=losses.binary_crossentropy,
+              metrics=[metrics.binary_accuracy])
+➡️ Binary classification:
+
+Loss: binary crossentropy
+
+Metric: binary accuracy
+
+Split validation set
+python
+Copy
+Edit
+X_val = X_train[:10000]
+partial_X_train = X_train[10000:]
+
+y_val = y_train[:10000]
+partial_y_train = y_train[10000:]
+Train the model (20 epochs)
+python
+Copy
+Edit
+history = model.fit(partial_X_train, partial_y_train,
+                    epochs=20, batch_size=512,
+                    validation_data=(X_val, y_val))
+Plot Training vs Validation Loss
+python
+Copy
+Edit
+plt.plot(epochs, loss_values, 'g', label="Training Loss")
+plt.plot(epochs, val_loss_values, 'b', label="Validation Loss")
+Plot Training vs Validation Accuracy
+python
+Copy
+Edit
+plt.plot(epochs, acc_values, 'g', label="Training Accuracy")
+plt.plot(epochs, val_acc_values, 'b', label="Validation Accuracy")
+Retrain model (3 epochs)
+python
+Copy
+Edit
+model.fit(partial_X_train, partial_y_train,
+          epochs=3, batch_size=512,
+          validation_data=(X_val, y_val))
+Make Predictions
+python
+Copy
+Edit
+result = model.predict(X_test)
+Round predictions
+python
+Copy
+Edit
+y_pred = np.zeros(len(result))
+for i, score in enumerate(result):
+    y_pred[i] = np.round(score)
+Evaluate model using MAE (mean absolute error)
+python
+Copy
+Edit
+mae = metrics.mean_absolute_error(y_pred, y_test)
+✨ 2️⃣ Key Observations
+Observation	What does it mean?
+Early epochs — Validation loss drops, accuracy improves	Model is learning well
+Later epochs — Validation loss increases, accuracy stagnates or drops	Overfitting starts
+Final model retrained only for 3 epochs	To avoid overfitting (based on earlier plots)
+MAE used as metric (not common)	Should preferably use accuracy or F1 score
+
+❓ 3️⃣ Sample QnA (For Viva / Interview)
+Basic Understanding
+Q1: What is the task here?
+A: Binary classification — Predict movie review sentiment (positive/negative)
+
+Q2: Why do we limit to 10,000 words?
+A: To reduce dimensionality, avoid overfitting, and focus on frequent words
+
+Model Architecture
+Q3: What is the activation function in the output layer and why?
+A: Sigmoid — because we want a probability (between 0 and 1) for binary classification
+
+Q4: Why binary crossentropy as loss?
+A: Best suited for binary classification tasks
+
+Data Preprocessing
+Q5: Why do we vectorize the sequences?
+A: To convert list of word indices into fixed-length numeric vectors (for neural network input)
+
+Training and Evaluation
+Q6: Why do we create a validation set?
+A: To evaluate the model performance on unseen data and monitor overfitting
+
+Q7: What is overfitting?
+A: Model performs well on training data but poorly on unseen data
+
+Advanced
+Q8: Why use ReLU in hidden layers?
+A: Helps with faster training, avoids vanishing gradient
+
+Q9: Why use RMSprop optimizer?
+A: Handles learning rate dynamically — works well for most problems
+
+Q10: Is MAE suitable for classification?
+A: Not ideal — better to use accuracy, precision, recall or F1-score
+
+✅ Summary
+Your code:
+
+Loads IMDB sentiment data
+
+Preprocesses & vectorizes it
+
+Builds a 2-layer neural network
+
+Trains & validates it
+
+Evaluates it (prediction + MAE)
+
+

@@ -1,0 +1,164 @@
+✅ FULL CODE EXPLANATION
+1. Headers and Setup
+cpp
+Copy
+Edit
+#include <iostream>
+#include <vector>
+#include <stack>
+#include <omp.h>
+using namespace std;
+``- `iostream` is for input/output.  
+- `vector` is used for the adjacency list of the graph.  
+- `stack` is used to simulate DFS.  
+- `omp.h` enables **OpenMP**, which allows parallel processing.
+
+---
+
+### 2. **Function: `parallelDFS()`**
+```cpp
+void parallelDFS(vector<vector<int>>& graph, int start)
+Takes an adjacency list representation of the graph.
+
+Begins DFS from a given starting node start.
+
+3. Initialization
+cpp
+Copy
+Edit
+int n = graph.size();
+vector<bool> visited(n, false);
+stack<int> s;
+vector<int> traversalOrder;
+s.push(start);
+n is the number of nodes.
+
+visited[] tracks if a node has been visited.
+
+stack<int> s is the core structure for DFS (LIFO order).
+
+traversalOrder records the order in which nodes are visited (for output).
+
+4. Main DFS Loop
+cpp
+Copy
+Edit
+while (!s.empty()) {
+    int u;
+    #pragma omp critical
+    {
+        u = s.top(); s.pop();
+    }
+While there are nodes in the stack:
+
+One thread at a time (critical section) pops the top node u from the stack.
+
+This is needed because the stack is a shared resource and not thread-safe.
+
+5. Visit Node
+cpp
+Copy
+Edit
+    if (!visited[u]) {
+        visited[u] = true;
+        cout << "Visited: " << u << endl;
+        traversalOrder.push_back(u);
+If node u has not been visited:
+
+Mark it as visited.
+
+Print and record the node.
+
+6. Parallel For Loop to Push Neighbors
+cpp
+Copy
+Edit
+        #pragma omp parallel for
+        for (int i = 0; i < graph[u].size(); ++i) {
+            int v = graph[u][i];
+            if (!visited[v]) {
+                #pragma omp critical
+                s.push(v);
+            }
+        }
+This loop is parallelized: multiple threads process the neighbors of u.
+
+For each neighbor v, if it's unvisited, push it to the stack safely using another critical section.
+
+⚠️ This part is parallel, but pushing to the stack must be done safely (critical), which limits real speedup.
+
+7. Print Traversal Order
+cpp
+Copy
+Edit
+cout << "Traversal Order: ";
+for (int node : traversalOrder) {
+    cout << node << " ";
+}
+cout << endl;
+After the DFS is complete, print the full traversal order.
+
+8. Main Function
+cpp
+Copy
+Edit
+int main() {
+    int n, e;
+    ...
+}
+Reads number of nodes and edges.
+
+Constructs the adjacency list.
+
+Reads undirected edges.
+
+Calls the parallelDFS() function with the input graph.
+
+⚙️ HOW PARALLEL DFS WORKS
+DFS is inherently recursive and stack-based, so parallelizing it is challenging.
+
+In this code:
+
+Nodes are processed one at a time, but neighbor processing is parallelized.
+
+Threads may compete to push to the shared stack.
+
+#pragma omp critical ensures safe updates but may reduce parallel efficiency.
+
+🔁 PARALLEL vs SEQUENTIAL DFS
+Aspect	Sequential DFS	Parallel DFS (OpenMP)
+Execution	Single thread	Multiple threads (shared memory)
+Speed	Fast for small graphs	Potentially faster on large graphs
+Traversal Order	Deterministic	Non-deterministic (due to thread scheduling)
+Stack Management	Simple, single-threaded stack	Requires synchronization (critical)
+Thread Safety	Not needed	Mandatory (for stack, visited)
+Complexity	Easy	More complex due to concurrency
+
+❓ KEY QUESTIONS & ANSWERS
+1. What is the purpose of #pragma omp critical?
+Answer: It ensures mutual exclusion—only one thread accesses a critical section at a time. This is necessary when accessing/modifying shared structures like the stack or visited[].
+
+2. Why is DFS harder to parallelize than BFS?
+Answer: DFS relies on deep recursive (or stack-based) paths, where each decision depends on the last. This makes it hard to split into independent tasks. BFS, on the other hand, processes full levels which are easier to parallelize.
+
+3. Why does the traversal order vary in parallel DFS?
+Answer: Due to multiple threads pushing neighbors to the stack in parallel, the order in which nodes are visited depends on thread execution timing, which is non-deterministic.
+
+4. What are the downsides of using #pragma omp critical in this code?
+Answer: It introduces serialization—only one thread can push or pop at a time, which limits parallel performance. If many threads wait for access, the benefit of parallelism is reduced.
+
+5. When is parallel DFS actually useful?
+Answer: It's useful when:
+
+You're exploring many neighbors at each step (like in dense graphs).
+
+You can modify the algorithm to work with task-based parallelism.
+
+You're solving specific problems (like parallel tree traversal, or parallel graph analytics on large datasets).
+
+✅ Summary
+Your code performs a parallel DFS using OpenMP, with added support to record and display traversal order.
+
+Parallel DFS is challenging due to stack dependency and synchronization overhead.
+
+For learning and small-scale demos, it's great. But for performance, more advanced task-parallel or distributed approaches are needed.
